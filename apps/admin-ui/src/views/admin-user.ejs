@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title %></title>
+    <style>
+      body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; margin: 0; padding: 2rem; background:#0b1020; color:#e6e8ef; }
+      .card { max-width: 960px; margin: 6vh auto; background:#121733; border:1px solid #2a2f4a; border-radius:12px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.25); }
+      .row { display:flex; justify-content: space-between; align-items: center; }
+      .muted { color:#a3a7bf; }
+      button.btn { background:#ef4444; border:none; color:white; padding:.5rem .9rem; border-radius:8px; cursor:pointer; }
+      button.btn:hover { background:#dc2626; }
+      table { width:100%; border-collapse: collapse; margin-top: 1rem; }
+      th, td { text-align:left; padding:.5rem .6rem; border-bottom:1px solid #2a2f4a; }
+      th { color:#a3a7bf; font-weight:600; }
+      code { background:#0b1020; padding:.15rem .35rem; border-radius:6px; }
+      a { color:#93c5fd; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="row">
+        <h1 style="margin:0">User Detail</h1>
+        <form method="post" action="/logout"><%- include('partials/csrf') %><button class="btn" type="submit">Logout</button></form>
+      </div>
+      <p class="muted">Signed in as <code><%= (user && user.email) || 'unknown' %></code> • <a href="/admin/users">Back to users</a></p>
+
+      <% if (!item) { %>
+        <p class="muted">No user selected.</p>
+      <% } else { %>
+        <h2 style="margin-top:1rem;">Profile</h2>
+        <table>
+          <tbody>
+            <tr><th style="width:220px;">Email</th><td><%= item.email || '' %></td></tr>
+            <tr><th>Entra ID</th><td><code><%= item.entraId %></code></td></tr>
+            <tr><th>Active</th><td><%= item.isActive ? 'yes' : 'no' %></td></tr>
+            <tr><th>Created</th><td><%= item.createdAt ? new Date(item.createdAt).toISOString() : '' %></td></tr>
+          </tbody>
+        </table>
+        <div class="row" style="margin:.75rem 0 1rem 0;">
+          <div></div>
+          <div>
+            <% if (item.isActive) { %>
+              <form method="post" action="/admin/users/<%= item.id %>/deactivate" style="display:inline;">
+                <%- include('partials/csrf') %>
+                <button class="btn" type="submit" title="Deactivate user">Deactivate</button>
+              </form>
+            <% } else { %>
+              <form method="post" action="/admin/users/<%= item.id %>/activate" style="display:inline;">
+                <%- include('partials/csrf') %>
+                <button class="btn" type="submit" title="Activate user" style="background:#16a34a">Activate</button>
+              </form>
+            <% } %>
+          </div>
+        </div>
+
+        <h2 style="margin-top:1.25rem;">Registrations</h2>
+        <table>
+          <thead><tr><th>When</th><th>Purpose</th><th>Project</th><th>Contact</th></tr></thead>
+          <tbody>
+            <% const regs = Array.isArray(registrations) ? registrations : []; %>
+            <% if (!regs.length) { %>
+              <tr><td colspan="4" class="muted">No registrations</td></tr>
+            <% } %>
+            <% regs.forEach(function(r){ %>
+              <tr>
+                <td><%= r.createdAt ? new Date(r.createdAt).toISOString() : '' %></td>
+                <td><%= r.purpose || '' %></td>
+                <td><%= r.projectName || '' %></td>
+                <td><%= r.contactEmail || '' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+
+        <h2 style="margin-top:1.25rem;">API Keys</h2>
+        <table>
+          <thead><tr><th>When</th><th>Identifier</th><th>Usage</th><th>Revoked</th></tr></thead>
+          <tbody>
+            <% const keylist = Array.isArray(keys) ? keys : []; %>
+            <% if (!keylist.length) { %>
+              <tr><td colspan="4" class="muted">No keys</td></tr>
+            <% } %>
+            <% keylist.forEach(function(k){ %>
+              <tr>
+                <td><%= k.createdAt ? new Date(k.createdAt).toISOString() : '' %></td>
+                <td><code><%= k.keyIdentifier %></code></td>
+                <td><%= k.usageDescription || '' %></td>
+                <td><%= k.revokedAt ? new Date(k.revokedAt).toISOString() : '' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+  </body>
+</html>

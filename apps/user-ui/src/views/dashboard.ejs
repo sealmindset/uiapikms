@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title %></title>
+    <style>
+      body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; margin: 0; padding: 2rem; background:#0b1020; color:#e6e8ef; }
+      .card { max-width: 720px; margin: 6vh auto; background:#121733; border:1px solid #2a2f4a; border-radius:12px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.25); }
+      .row { display:flex; justify-content: space-between; align-items: center; }
+      .muted { color:#a3a7bf; }
+      button.btn { background:#ef4444; border:none; color:white; padding:.5rem .9rem; border-radius:8px; cursor:pointer; }
+      button.btn:hover { background:#dc2626; }
+      code { background:#0b1020; padding:.15rem .35rem; border-radius:6px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="row">
+        <h1 style="margin:0">Dashboard</h1>
+        <form method="post" action="/logout"><button class="btn" type="submit">Logout</button></form>
+      </div>
+      <p class="muted">Signed in as <code><%= (user && user.email) || 'unknown' %></code></p>
+      <p>Welcome to the API Key Management user portal.</p>
+      <p>
+        <a href="/register" style="color:#93c5fd">Register a new API usage</a>
+        &nbsp;•&nbsp;
+        <a href="/keys" style="color:#93c5fd; font-weight:600;">Manage API keys</a>
+      </p>
+
+      <h3>Your registrations</h3>
+      <div>
+        <% if (registrations && registrations.length) { %>
+          <ul>
+            <% registrations.forEach(function(r){ %>
+              <li class="muted">
+                <code><%= r.purpose %></code>
+                <% if (r.projectName) { %> — <%= r.projectName %><% } %>
+                <% if (r.contactEmail) { %> — <%= r.contactEmail %><% } %>
+                — <%= new Date(r.createdAt).toLocaleString() %>
+              </li>
+            <% }) %>
+          </ul>
+        <% } else { %>
+          <p class="muted">No registrations yet.</p>
+        <% } %>
+      </div>
+    </div>
+  </body>
+</html>

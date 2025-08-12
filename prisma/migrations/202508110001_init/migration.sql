@@ -1,0 +1,1 @@
+-- See schema.prisma; Prisma will generate SQL. Placeholder migration file.

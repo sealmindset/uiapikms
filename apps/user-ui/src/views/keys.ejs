@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title><%= title %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { background:#0b0f14; color:#e6edf3; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; margin:0; }
+    header, main { max-width: 860px; margin: 0 auto; padding: 16px; }
+    a { color:#79c0ff; }
+    table { width:100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border-bottom:1px solid #1f2937; padding: 8px; text-align:left; }
+    th { color:#9fb7d0; font-weight:600; }
+    .actions { margin: 16px 0; }
+    input, button { background:#111827; color:#e6edf3; border:1px solid #374151; padding:8px 10px; border-radius:6px; }
+    label { display:block; margin: 8px 0 4px; color:#9fb7d0; }
+    form.inline { display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
+    /* Modal */
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items:center; justify-content:center; padding: 16px; }
+    .modal-card { background:#0f172a; border:1px solid #374151; border-radius:10px; padding: 16px; width: 100%; max-width: 560px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+    .row { display:flex; justify-content: space-between; align-items:center; gap:8px; }
+    .muted { color:#9fb7d0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+      <h1 style="margin:0">Your API Keys</h1>
+      <form method="post" action="/logout"><button type="submit">Logout</button></form>
+    </div>
+    <p class="muted">Signed in as <code><%= (user && user.email) || 'unknown' %></code></p>
+  </header>
+  <main>
+    <section class="actions">
+      <h3>Issue a new key</h3>
+      <% const f = (typeof form !== 'undefined' && form) ? form : {}; %>
+      <% const errMap = (typeof errors !== 'undefined' && Array.isArray(errors)) ? errors.reduce(function(acc, e){ var k = e.path || '_'; (acc[k]||(acc[k]=[])).push(e.message); return acc; }, {}) : {}; %>
+      <% if (typeof errors !== 'undefined' && errors && errors.length) { %>
+        <div style="background:#3f1d2e; color:#fecdd3; border:1px solid #7f1d1d; padding:.6rem .8rem; border-radius:6px; margin: 0 0 .75rem 0;">
+          <strong>There were problems with your submission:</strong>
+          <ul>
+            <% errors.forEach(function(err){ %>
+              <li><%= err.message %></li>
+            <% }) %>
+          </ul>
+        </div>
+      <% } %>
+      <form method="post" action="/keys" class="inline">
+        <input type="hidden" name="_csrf" value="<%= (typeof csrfToken !== 'undefined' && csrfToken) ? csrfToken : '' %>">
+        <div>
+          <label for="usageDescription">Usage description</label>
+          <input id="usageDescription" name="usageDescription" placeholder="e.g. CI pipeline" required value="<%= f.usageDescription ? f.usageDescription : '' %>" <%= errMap.usageDescription ? 'aria-invalid="true" aria-describedby="error-usageDescription"' : '' %> />
+          <% if (errMap.usageDescription) { %><div id="error-usageDescription" style="color:#fecaca; font-size:.9rem; margin-top:.25rem;"><%= errMap.usageDescription.join(', ') %></div><% } %>
+        </div>
+        <div>
+          <button type="submit">Create Key</button>
+        </div>
+      </form>
+    </section>
+
+    <section>
+      <h3>Existing keys</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Created</th>
+            <th>Description</th>
+            <th>Identifier</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (keys && keys.length) { %>
+            <% keys.forEach(function(k){ %>
+              <tr>
+                <td><%= new Date(k.createdAt).toLocaleString() %></td>
+                <td><%= k.usageDescription || '' %></td>
+                <td><code><%= k.keyIdentifier %></code></td>
+                <td><%= k.revokedAt ? 'Revoked' : 'Active' %></td>
+                <td>
+                  <% if (!k.revokedAt) { %>
+                    <form method="post" action="/keys/<%= k.id %>/revoke">
+                      <input type="hidden" name="_csrf" value="<%= (typeof csrfToken !== 'undefined' && csrfToken) ? csrfToken : '' %>">
+                      <button type="submit">Revoke</button>
+                    </form>
+                  <% } else { %>
+                    —
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="5">No keys yet.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <!-- Modal for display-once key -->
+  <div id="key-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="key-modal-title">
+    <div class="modal-card">
+      <div class="row">
+        <h2 id="key-modal-title" style="margin:0">Your new API Key</h2>
+        <button id="key-modal-close" aria-label="Close">✕</button>
+      </div>
+      <p class="muted">This value is shown only once. Copy and store it securely.</p>
+      <pre id="key-modal-secret" style="background:#111827; border:1px solid #374151; padding:12px; border-radius:8px; overflow:auto;"></pre>
+      <div class="row" style="margin-top:12px;">
+        <button id="key-modal-copy">Copy</button>
+        <div class="muted">Close this dialog after copying.</div>
+      </div>
+    </div>
+  </div>
+  <script src="/keys.js" defer></script>
+</body>
+</html>

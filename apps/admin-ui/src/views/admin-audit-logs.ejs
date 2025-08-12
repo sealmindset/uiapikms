@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title %></title>
+    <style>
+      body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; margin: 0; padding: 2rem; background:#0b1020; color:#e6e8ef; }
+      .card { max-width: 1100px; margin: 6vh auto; background:#121733; border:1px solid #2a2f4a; border-radius:12px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.25); }
+      .row { display:flex; justify-content: space-between; align-items: center; }
+      .muted { color:#a3a7bf; }
+      table { width:100%; border-collapse: collapse; }
+      th, td { padding: .5rem; border-bottom: 1px solid #2a2f4a; text-align:left; vertical-align: top; }
+      th { color:#a3a7bf; font-weight:600; }
+      code { background:#0b1020; padding:.15rem .35rem; border-radius:6px; }
+      pre { margin:0; white-space: pre-wrap; word-wrap: break-word; }
+      a { color:#93c5fd; }
+      .m0 { margin:0 }
+      .mt1 { margin-top:1rem }
+      .gap-sm { gap:.5rem }
+      .gap-md { gap:.75rem }
+      .flex { display:flex }
+      .flex-wrap { flex-wrap:wrap }
+      .items-end { align-items:flex-end }
+      .ml-auto { margin-left:auto }
+      .btn { background:#ef4444; border:none; color:white; padding:.5rem .9rem; border-radius:8px; cursor:pointer; text-decoration:none; display:inline-block }
+      .btn-secondary { background:#374151; }
+      .btn-disabled { pointer-events:none; opacity:.5 }
+      .filters { margin:1rem 0 }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="row">
+        <h1 class="m0">Audit Logs</h1>
+        <form method="post" action="/logout"><button class="btn" type="submit">Logout</button></form>
+      </div>
+      <p class="muted">Admin: <code><%= (user && user.email) || 'unknown' %></code></p>
+
+      <form method="get" action="/admin/audit-logs" class="filters flex gap-sm flex-wrap items-end">
+        <div>
+          <label class="muted" for="action">Action</label><br/>
+          <input id="action" name="action" value="<%= (filters && filters.action) || '' %>" placeholder="CREATE_KEY" />
+        </div>
+        <div>
+          <label class="muted" for="email">Email</label><br/>
+          <input id="email" name="email" value="<%= (filters && filters.email) || '' %>" placeholder="user@example.com" />
+        </div>
+        <div>
+          <label class="muted" for="start">Start</label><br/>
+          <input id="start" name="start" type="datetime-local" value="<%= (filters && filters.start) || '' %>" />
+        </div>
+        <div>
+          <label class="muted" for="end">End</label><br/>
+          <input id="end" name="end" type="datetime-local" value="<%= (filters && filters.end) || '' %>" />
+        </div>
+        <div>
+          <label class="muted" for="pageSize">Page size</label><br/>
+          <input id="pageSize" name="pageSize" type="number" min="1" max="100" value="<%= (pagination && pagination.pageSize) || 25 %>" />
+        </div>
+        <div>
+          <button class="btn" type="submit">Apply</button>
+        </div>
+      </form>
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Key Id</th>
+            <th>Metadata</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (items && items.length) { %>
+            <% items.forEach(function(a){ %>
+              <tr>
+                <td class="muted"><%= new Date(a.createdAt).toLocaleString() %></td>
+                <td><%= (a.user && a.user.email) || '—' %></td>
+                <td><code><%= a.action %></code></td>
+                <td><%= a.keyId || '—' %></td>
+                <td><pre><%= a.metadata ? JSON.stringify(a.metadata, null, 2) : '—' %></pre></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td class="muted" colspan="5">No audit logs found.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
+      <div class="row mt1 gap-md">
+        <% const qs = function(page){ const p = new URLSearchParams(); if (filters && filters.action) p.set('action', filters.action); if (filters && filters.email) p.set('email', filters.email); if (filters && filters.start) p.set('start', filters.start); if (filters && filters.end) p.set('end', filters.end); if (pagination && pagination.pageSize) p.set('pageSize', String(pagination.pageSize)); p.set('page', String(page)); return '?' + p.toString(); }; %>
+        <div class="muted">
+          Page <%= (pagination && pagination.page) || 1 %><% if (pagination && pagination.totalPages){ %> of <%= pagination.totalPages %><% } %>
+          <% if (pagination && typeof pagination.total !== 'undefined') { %> · Total <%= pagination.total %><% } %>
+        </div>
+        <div class="ml-auto flex gap-sm">
+          <% const current = (pagination && pagination.page) || 1; %>
+          <a class="btn btn-secondary <%= (pagination && pagination.hasPrev) ? '' : 'btn-disabled' %>" href="<%= qs(Math.max(current-1,1)) %>">Prev</a>
+          <a class="btn btn-secondary <%= (pagination && pagination.hasNext) ? '' : 'btn-disabled' %>" href="<%= qs(current+1) %>">Next</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

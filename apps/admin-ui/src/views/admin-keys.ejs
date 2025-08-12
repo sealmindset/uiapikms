@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title><%= title %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { background:#0b0f14; color:#e6edf3; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; margin:0; }
+    header, main { max-width: 980px; margin: 0 auto; padding: 16px; }
+    a { color:#79c0ff; }
+    table { width:100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border-bottom:1px solid #1f2937; padding: 8px; text-align:left; }
+    th { color:#9fb7d0; font-weight:600; }
+    code { background:#0f172a; border:1px solid #1f2937; padding:2px 4px; border-radius:4px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Admin: API Keys</h1>
+    <div><a href="/login">Login</a> · <a href="/admin/users">Users</a> · <a href="/admin/registrations">Registrations</a></div>
+  </header>
+  <main>
+    <table>
+      <thead>
+        <tr>
+          <th>Created</th>
+          <th>User Email</th>
+          <th>Description</th>
+          <th>Identifier</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (items && items.length) { %>
+          <% items.forEach(function(k){ %>
+            <tr>
+              <td><%= new Date(k.createdAt).toLocaleString() %></td>
+              <td><%= (k.user && k.user.email) ? k.user.email : '' %></td>
+              <td><%= k.usageDescription || '' %></td>
+              <td><code><%= k.keyIdentifier %></code></td>
+              <td><%= k.revokedAt ? 'Revoked' : 'Active' %></td>
+            </tr>
+          <% }) %>
+        <% } else { %>
+          <tr><td colspan="5">No keys found.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

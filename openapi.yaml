@@ -1,0 +1,329 @@
+openapi: 3.1.0
+info:
+  title: UI-Driven API Key Management System
+  version: 0.1.0
+  description: Initial scaffold of endpoints for user-ui and admin-ui.
+servers:
+  - url: http://localhost:3020
+    description: user-ui
+  - url: http://localhost:4000
+    description: admin-ui
+paths:
+  /healthz:
+    get:
+      summary: Legacy liveness endpoint
+      responses:
+        '200':
+          description: OK
+  /health/live:
+    get:
+      summary: Liveness probe
+      responses:
+        '200':
+          description: Service is alive
+  /health/ready:
+    get:
+      summary: Readiness probe (checks DB/session, and Key Vault when configured)
+      responses:
+        '200':
+          description: Service is ready
+  /session-check:
+    get:
+      summary: Increment and return session counter
+      responses:
+        '200':
+          description: OK
+  /login:
+    get:
+      summary: Login page (dev mock)
+      responses:
+        '200':
+          description: HTML login page
+  /auth/mock:
+    get:
+      summary: Dev mock login
+      responses:
+        '302':
+          description: Redirect after mock login
+  /logout:
+    post:
+      summary: Destroy session
+      responses:
+        '302':
+          description: Redirect to login
+  /dashboard:
+    get:
+      summary: User dashboard (protected)
+      responses:
+        '200':
+          description: Dashboard HTML
+  /register:
+    get:
+      summary: Registration form (protected)
+      responses:
+        '200':
+          description: Registration HTML form
+    post:
+      summary: Submit registration (protected, CSRF required except in test)
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                purpose:
+                  type: string
+                  enum: [internal_tooling, third_party_integration, other]
+                projectName:
+                  type: string
+                contactEmail:
+                  type: string
+              required: [purpose]
+      responses:
+        '302':
+          description: Redirect to /dashboard
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /admin/users:
+    get:
+      summary: Admin users view (protected, admin)
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Search by email or Entra ID (case-insensitive contains)
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      responses:
+        '200':
+          description: Admin users HTML
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized (not logged in)
+        '403':
+          description: Forbidden (requires admin role)
+
+  /admin/users/{id}:
+    get:
+      summary: Admin user detail (protected, admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Admin user detail HTML (in test env returns placeholder when user missing)
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized (not logged in)
+        '403':
+          description: Forbidden (requires admin role)
+        '404':
+          description: User not found (non-test env)
+
+  /admin/users/{id}/activate:
+    post:
+      summary: Activate a user (protected, admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-CSRF-Token
+          schema: { type: string }
+          required: false
+          description: CSRF token. Required in non-test environments if not provided as a form field `_csrf`.
+      responses:
+        '302':
+          description: Redirect back to /admin/users/{id}
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized (not logged in)
+        '403':
+          description: Forbidden (requires admin role or CSRF failed)
+        '404':
+          description: User not found
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                _csrf:
+                  type: string
+                  description: CSRF token from server-rendered form. Required in non-test environments if CSRF header is not provided.
+      description: |
+        Requires a valid CSRF token in non-test environments. Provide it as a hidden form field `_csrf` (EJS forms do this by default) or via the `X-CSRF-Token` header. CSRF is disabled only when `NODE_ENV=test`.
+
+  /admin/users/{id}/deactivate:
+    post:
+      summary: Deactivate a user (protected, admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-CSRF-Token
+          schema: { type: string }
+          required: false
+          description: CSRF token. Required in non-test environments if not provided as a form field `_csrf`.
+      responses:
+        '302':
+          description: Redirect back to /admin/users/{id}
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized (not logged in)
+        '403':
+          description: Forbidden (requires admin role or CSRF failed)
+        '404':
+          description: User not found
+        '429':
+          description: Too Many Requests (rate limited)
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            Retry-After:
+              $ref: '#/components/headers/Retry-After'
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                _csrf:
+                  type: string
+                  description: CSRF token from server-rendered form. Required in non-test environments if CSRF header is not provided.
+      description: |
+        Requires a valid CSRF token in non-test environments. Provide it as a hidden form field `_csrf` (EJS forms do this by default) or via the `X-CSRF-Token` header. CSRF is disabled only when `NODE_ENV=test`.
+  /admin/keys:
+    get:
+      summary: Admin keys view (protected, admin)
+      responses:
+        '200':
+          description: Admin keys HTML
+  /admin/audit-logs:
+    get:
+      summary: Admin audit logs view (protected, admin)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+        - in: query
+          name: action
+          schema: { type: string }
+        - in: query
+          name: email
+          schema: { type: string }
+        - in: query
+          name: start
+          schema: { type: string, format: date-time }
+        - in: query
+          name: end
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Admin audit logs HTML
+  /admin/registrations:
+    get:
+      summary: Admin registrations view (protected, admin)
+      parameters:
+        - in: query
+          name: take
+          schema: { type: integer, minimum: 1, maximum: 100 }
+          description: Number of results to return (default 50)
+      responses:
+        '200':
+          description: Admin registrations HTML
+  /keys:
+    get:
+      summary: List current user's API keys (metadata only)
+      responses:
+        '200':
+          description: Keys HTML page (no plaintext)
+    post:
+      summary: Issue a new API key (display-once)
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                usageDescription:
+                  type: string
+              required: [usageDescription]
+      responses:
+        '200':
+          description: Display-once page containing the plaintext key
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /keys/{id}/revoke:
+    post:
+      summary: Revoke an API key
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '302':
+          description: Redirect to /keys
+        '429':
+          $ref: '#/components/responses/RateLimited'
+components:
+  headers:
+    RateLimit-Limit:
+      description: Maximum number of requests allowed in the current window.
+      schema:
+        type: integer
+    RateLimit-Remaining:
+      description: Remaining number of requests in the current window.
+      schema:
+        type: integer
+    RateLimit-Reset:
+      description: Time when the current rate limit window resets in UTC epoch seconds.
+      schema:
+        type: integer
+    Retry-After:
+      description: Seconds to wait before making a new request.
+      schema:
+        type: integer
+  responses:
+    RateLimited:
+      description: Too Many Requests (rate limited)
+      headers:
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimit-Limit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimit-Remaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimit-Reset'
+        Retry-After:
+          $ref: '#/components/headers/Retry-After'

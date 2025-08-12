@@ -1,0 +1,67 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["linux-arm64-openssl-3.0.x", "native"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String
+  entraId       String         @unique
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  registrations Registration[]
+  apiKeys       ApiKey[]
+  auditLogs     AuditLog[]
+}
+
+model Registration {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose      Purpose
+  projectName  String?
+  contactEmail String?
+  createdAt    DateTime @default(now())
+}
+
+model ApiKey {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyIdentifier    String   @unique
+  usageDescription String
+  createdAt        DateTime @default(now())
+  revokedAt        DateTime?
+  shownOnce        Boolean  @default(false)
+}
+
+model AuditLog {
+  id        String      @id @default(uuid())
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id])
+  action    AuditAction
+  keyId     String?
+  metadata  Json?
+  createdAt DateTime    @default(now())
+}
+
+enum Purpose {
+  internal_tooling
+  third_party_integration
+  other
+}
+
+enum AuditAction {
+  CREATE_KEY
+  REVOKE_KEY
+  REVOKE_ALL
+  RESET_USER
+  LOGIN
+  LOGOUT
+  REGISTRATION
+}

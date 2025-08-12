@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title><%= title %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { background:#0b0f14; color:#e6edf3; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; margin:0; }
+    header, main { max-width: 860px; margin: 0 auto; padding: 16px; }
+    a { color:#79c0ff; }
+    code { background:#0f172a; border:1px solid #1f2937; padding:8px; border-radius:6px; display:block; word-break: break-all; }
+    .warn { color:#fbbf24; }
+    button { background:#111827; color:#e6edf3; border:1px solid #374151; padding:8px 10px; border-radius:6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Copy your API key now</h1>
+    <div><a href="/keys">Back to Keys</a></div>
+  </header>
+  <main>
+    <p class="warn">This secret is shown only once. Store it securely; you won't be able to view it again.</p>
+    <code><%= secret %></code>
+    <div style="margin-top:12px;">
+      <a href="/keys"><button>Done</button></a>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+coverage/
+pnpm-lock.yaml
+.prisma/
+test/tfakv/.terraform
+test/tfakv/terraform.tfstate
+test/tfakv/terraform.tfstate.backup
+test/tfakv/terraform.tfvars

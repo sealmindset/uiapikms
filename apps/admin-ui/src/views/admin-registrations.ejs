@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title %></title>
+    <style>
+      body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; margin: 0; padding: 2rem; background:#0b1020; color:#e6e8ef; }
+      .card { max-width: 960px; margin: 6vh auto; background:#121733; border:1px solid #2a2f4a; border-radius:12px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.25); }
+      .row { display:flex; justify-content: space-between; align-items: center; }
+      .muted { color:#a3a7bf; }
+      table { width:100%; border-collapse: collapse; }
+      th, td { padding: .5rem; border-bottom: 1px solid #2a2f4a; text-align:left; }
+      th { color:#a3a7bf; font-weight:600; }
+      code { background:#0b1020; padding:.15rem .35rem; border-radius:6px; }
+      a { color:#93c5fd; }
+      button.btn { background:#ef4444; border:none; color:white; padding:.5rem .9rem; border-radius:8px; cursor:pointer; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="row">
+        <h1 style="margin:0">Registrations</h1>
+        <form method="post" action="/logout"><button class="btn" type="submit">Logout</button></form>
+      </div>
+      <p class="muted">Admin: <code><%= (user && user.email) || 'unknown' %></code></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Created</th>
+            <th>User</th>
+            <th>Purpose</th>
+            <th>Project</th>
+            <th>Contact</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (registrations && registrations.length) { %>
+            <% registrations.forEach(function(r){ %>
+              <tr>
+                <td class="muted"><%= new Date(r.createdAt).toLocaleString() %></td>
+                <td><%= (r.user && r.user.email) || '—' %></td>
+                <td><code><%= r.purpose %></code></td>
+                <td><%= r.projectName || '—' %></td>
+                <td><%= r.contactEmail || '—' %></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td class="muted" colspan="5">No registrations found.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>

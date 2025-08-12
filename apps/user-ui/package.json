@@ -1,0 +1,52 @@
+{
+  "name": "user-ui",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "type": "commonjs",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier -w .",
+    "test": "jest --runInBand"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.4.1",
+    "@azure/keyvault-secrets": "^4.9.0",
+    "@prisma/client": "^5.18.0",
+    "@uiapikms/shared": "workspace:*",
+    "body-parser": "^1.20.2",
+    "connect-pg-simple": "^9.0.0",
+    "cors": "^2.8.5",
+    "csurf": "^1.11.0",
+    "ejs": "^3.1.10",
+    "express": "^5.0.0",
+    "express-rate-limit": "^7.4.0",
+    "express-session": "^1.17.3",
+    "helmet": "^7.1.0",
+    "openid-client": "^5.7.1",
+    "pg": "^8.12.0",
+    "pino": "^9.2.0",
+    "pino-http": "^9.0.0",
+    "uuid": "^9.0.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.19.6",
+    "@types/connect-pg-simple": "^7.0.3",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/express-session": "^1.17.8",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.12",
+    "@types/pg": "^8.15.5",
+    "@types/supertest": "^2.0.16",
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  }
+}

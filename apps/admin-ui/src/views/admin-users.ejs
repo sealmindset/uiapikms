@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title %></title>
+    <style>
+      body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; margin: 0; padding: 2rem; background:#0b1020; color:#e6e8ef; }
+      .card { max-width: 840px; margin: 6vh auto; background:#121733; border:1px solid #2a2f4a; border-radius:12px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.25); }
+      .row { display:flex; justify-content: space-between; align-items: center; }
+      .muted { color:#a3a7bf; }
+      button.btn { background:#ef4444; border:none; color:white; padding:.5rem .9rem; border-radius:8px; cursor:pointer; }
+      button.btn:hover { background:#dc2626; }
+      table { width:100%; border-collapse: collapse; margin-top: 1rem; }
+      th, td { text-align:left; padding:.5rem .6rem; border-bottom:1px solid #2a2f4a; }
+      th { color:#a3a7bf; font-weight:600; }
+      code { background:#0b1020; padding:.15rem .35rem; border-radius:6px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="row">
+        <h1 style="margin:0">Admin Users</h1>
+        <form method="post" action="/logout"><%- include('partials/csrf') %><button class="btn" type="submit">Logout</button></form>
+      </div>
+      <p class="muted">Signed in as <code><%= (user && user.email) || 'unknown' %></code> with roles <code><%= (user && user.roles && user.roles.join(', ')) || 'none' %></code></p>
+      <form method="get" action="/admin/users" class="row" style="gap:.75rem; margin:.5rem 0 0 0;">
+        <div style="flex:1">
+          <input type="text" name="q" placeholder="Search by email or Entra ID" value="<%= (typeof search !== 'undefined' && search) ? search : '' %>" style="width:100%; padding:.5rem .6rem; border-radius:8px; background:#0b1020; border:1px solid #2a2f4a; color:#e6e8ef;" />
+        </div>
+        <div>
+          <button type="submit" class="btn" style="background:#3b82f6">Search</button>
+        </div>
+      </form>
+      <table>
+        <thead>
+          <tr><th>Email</th><th>Entra ID</th><th>Active</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% const list = (typeof items !== 'undefined' && items && items.length) ? items : []; %>
+          <% if (!list.length) { %>
+            <tr><td colspan="4" class="muted">No users found</td></tr>
+          <% } %>
+          <% list.forEach(function(u){ %>
+            <tr>
+              <td><%= u.email || '' %></td>
+              <td><code><%= u.entraId || '' %></code></td>
+              <td><%= u.isActive ? 'yes' : 'no' %></td>
+              <td><a href="/admin/users/<%= u.id %>">View</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <% const pg = typeof pagination !== 'undefined' ? pagination : { page:1, pageSize:25, hasPrev:false, hasNext:false, total:0, totalPages:1 }; %>
+      <div class="row" style="margin-top:1rem;">
+        <div class="muted">Page <%= pg.page %> of <%= pg.totalPages %> (<%= pg.total || 0 %> total)</div>
+        <div>
+          <% const base = '/admin/users?q=' + encodeURIComponent((typeof search !== 'undefined' && search) ? search : '') + '&pageSize=' + (pg.pageSize||25) + '&page='; %>
+          <% if (pg.hasPrev) { %><a href="<%= base + (pg.page-1) %>">Prev</a><% } %>
+          <% if (pg.hasPrev && pg.hasNext) { %> | <% } %>
+          <% if (pg.hasNext) { %><a href="<%= base + (pg.page+1) %>">Next</a><% } %>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
