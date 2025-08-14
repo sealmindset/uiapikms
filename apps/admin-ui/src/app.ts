@@ -8,8 +8,10 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
+import cookieParser from "cookie-parser";
 import { requireAuth, requireRole } from "./middleware/rbac";
 import { prisma } from "./prisma";
+import { router as oidcRouter } from "./routes/oidc";
 import csurf from "csurf";
 import { z } from "zod";
 
@@ -33,7 +35,7 @@ export function buildApp() {
         styleSrc: ["'self'", "https:", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
         connectSrc: ["*"] , // allow open XHR per project rule
-        formAction: ["'self'"],
+        formAction: ["'self'", "http://localhost:3020", "http://localhost:4000"],
         objectSrc: ["'none'"],
         frameAncestors: ["'self'"]
       }
@@ -41,6 +43,7 @@ export function buildApp() {
     crossOriginEmbedderPolicy: false
   }));
   app.use(cors({ origin: ["http://localhost:4000"], credentials: true }));
+  // mount later after session
   app.use(rateLimit({ windowMs: 900000, max: 100 }));
   const PgSession = connectPgSimple(session);
   const useMemory = (process.env.NODE_ENV || "development") === "test";
@@ -48,6 +51,7 @@ export function buildApp() {
     ? new session.MemoryStore()
     : new PgSession({ pool: new Pool({ connectionString: process.env.DATABASE_URL }), tableName: "session", createTableIfMissing: true });
   app.use(session({
+    name: 'admin.sid',
     store,
     secret: process.env.SESSION_SECRET || "dev-secret", resave: false, saveUninitialized: false,
     cookie: { httpOnly: true, sameSite: "lax", secure: false }
@@ -55,10 +59,25 @@ export function buildApp() {
   app.use(pinoHttp());
   app.use(bodyParser.urlencoded({ extended: false }));
   app.use(bodyParser.json());
+  app.use(cookieParser());
+  // Simple logout GET to avoid CSRF token requirement
+  app.get('/logout', (req,res)=>{
+    req.session.destroy(()=>{
+      res.clearCookie('admin.sid');
+      res.redirect('/login');
+    });
+  });
+  // Mount OIDC router after session so req.session is available
+  app.use(oidcRouter);
   // CSRF protection (disabled in test)
   const isTest = (process.env.NODE_ENV || "development") === "test";
   if (!isTest) {
-    app.use((csurf() as any));
+    const csrfProtection = csurf();
+    app.use((req: any, res: any, next: any) => {
+      const p = req.path;
+      if (p.startsWith('/auth/') || p === '/logout') return next();
+      return csrfProtection(req, res, next);
+    });
     app.use((req: any, res, next) => {
       try {
         res.locals.csrfToken = req.csrfToken();
@@ -95,14 +114,20 @@ export function buildApp() {
     res.json({ ok: true, count: req.session.count });
   });
   // Dev mock auth
-  app.get("/", (_req,res)=>res.redirect("/login"));
+  app.get("/login", (_req, res) => {
+    res.redirect("/auth/oidc/start");
+  });
   app.get("/login", (req,res)=>{
     if ((process.env.NODE_ENV || "development") === "production") {
       res.set("Cache-Control","no-store");
     }
-    res.render("login", { title: "Admin Login", app: "admin" });
+    res.render("login", { title: "Admin Login", app: "admin", env: (process.env.NODE_ENV || "development") });
   });
+  if ((process.env.NODE_ENV || "development") === "production") {
+  app.use("/auth/oidc", oidcRouter);
+} else {
   app.get("/auth/mock", (req:any,res:any)=>{ (req.session as any).user={id:"admin",email:"admin@example.com",entraId:"mock",roles:["admin"]}; res.redirect("/admin/users"); });
+}
   app.post("/logout", (req,res)=>{ req.session?.destroy(()=>res.redirect("/login")); });
 
   // Per-route POST rate limiter (admin actions). Disabled in test.

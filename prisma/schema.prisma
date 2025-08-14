@@ -38,6 +38,17 @@ model ApiKey {
   createdAt        DateTime @default(now())
   revokedAt        DateTime?
   shownOnce        Boolean  @default(false)
+  monthlyCapTokens Int?
+  usages           Usage[]
+}
+
+model Usage {
+  id        String   @id @default(uuid())
+  apiKeyId  String
+  apiKey    ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  tokens    Int
+  model     String
+  createdAt DateTime @default(now())
 }
 
 model AuditLog {

@@ -15,8 +15,13 @@
   <body>
     <div class="card">
       <h1 style="margin-top:0">Admin Login</h1>
-      <p class="muted">Development mock login for the <strong><%= app %></strong> app.</p>
-      <p><a class="btn" href="/auth/mock">Continue with Mock</a></p>
+      <% if (env === 'production') { %>
+        <p class="muted">Sign in with your privileged Microsoft account (<code>priv_*</code>).</p>
+        <p><a class="btn" href="/auth/oidc/login">Continue with Microsoft</a></p>
+      <% } else { %>
+        <p class="muted">Development mock login for the <strong><%= app %></strong> app.</p>
+        <p><a class="btn" href="/auth/mock">Continue with Mock</a></p>
+      <% } %>
     </div>
   </body>
 </html>

@@ -113,10 +113,47 @@ The portal receives the tokens and starts a session; no passwords are handled by
 #### SSO experience
 – Users already signed in to Microsoft 365 (with MFA) are silently logged in to the portal.
 – Logout simply clears the session; identities remain governed by Entra ID.
-API-key provisioning security
+
+#### API-key provisioning security
 – The backend obtains a bearer token (on-behalf-of flow) to call the APIM management API, so only authenticated Entra ID principals can create or manage subscriptions.
 – When an account is disabled in Entra ID, the portal’s admin job detects it (graph query) and automatically revokes the user’s APIM subscription key.
 
 #### If the company’s conditional-access policies change (e.g., phishing-resistant MFA, device compliance), the portal inherits them without code changes because all auth is delegated to Entra ID.
+
+---
+### 9. Production Admin UI environment variables
+
+| Variable | Description |
+| --- | --- |
+| `OIDC_AUTHORITY` | `https://login.microsoftonline.com/<tenantId>/v2.0` |
+| `OIDC_CLIENT_ID` | App registration ID of `uiapikms-admin-prod` |
+| `OIDC_REDIRECT_URI` | Public HTTPS callback, e.g. `https://admin.portal.company.com/auth/oidc/callback` |
+| `NODE_ENV` | `production` to enable privileged enforcement |
+| `SESSION_SECRET` | Strong random string for cookie sessions |
+| `DATABASE_URL` | Postgres connection string |
+
+Add these to your secret store / deployment pipeline only for the prod environment. Dev/test continue to use mock login and do **not** require these vars.
+
+---
+### 10. Data Persistence (Postgres + Prisma)
+
+Both **`user-ui`** and **`admin-ui`** depend on a shared Postgres instance provisioned by the `uiapikms` Terraform stack (Azure Database for PostgreSQL Flexible Server with private endpoint). Prisma acts as the type-safe ORM and migration engine.
+
+| Table / Model | Purpose |
+| --- | --- |
+| `User` | Maps Entra ID object (`oid`) to local profile; tracks active / inactive state. |
+| `ApiKey` | Stores subscription key value (hashed), creation & rotation timestamps, expiry. |
+| `Registration` | One-time self-service registration records pending verification. |
+| `AuditLog` | Immutable log of every key creation, rotation, revocation, and admin action. |
+
+Key points:
+
+1. **Schema & migrations** – `prisma/schema.prisma` defines models; `prisma migrate` applies versioned SQL during CI/CD.
+2. **Typed CRUD** – All data access uses `PrismaClient` methods (`findMany`, `create`, etc.) ensuring parameterisation.
+3. **Atomic operations** – Complex flows run inside `prisma.$transaction` to keep user/key/audit changes consistent.
+4. **No DB → no keys** – If Postgres is unavailable the UIs can render static pages, but sign-up, key issuance, and admin workflows are disabled.
+5. **Connection** – `DATABASE_URL` injected via environment/Key Vault; connections stay inside the AKS VNet.
+
+> _Operational note_: For high concurrency enable PG Bouncer or Azure Flexible Server connection pooling and adjust Prisma `connection_limit`.
 
 > _This overview complements the detailed READMEs in each repository and should be the starting point for new engineers onboarding to the AI platform._

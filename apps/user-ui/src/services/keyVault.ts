@@ -1,13 +1,14 @@
 import { DefaultAzureCredential } from '@azure/identity';
 import { SecretClient } from '@azure/keyvault-secrets';
 
-const kvUrl = process.env.AZURE_KEY_VAULT_URL || '';
+// Accept either AZURE_KEY_VAULT_URL (preferred) or legacy AZURE_KEY_VAULT_URI for compatibility
+const kvUrl = process.env.AZURE_KEY_VAULT_URL || process.env.AZURE_KEY_VAULT_URI || '';
 let client: SecretClient | null = null;
 
 export function getSecretClient(): SecretClient {
   if (!client) {
     if (!kvUrl) {
-      throw new Error('AZURE_KEY_VAULT_URL is not set');
+      throw new Error('Key Vault URL is not configured (set AZURE_KEY_VAULT_URL or AZURE_KEY_VAULT_URI)');
     }
     const credential = new DefaultAzureCredential();
     client = new SecretClient(kvUrl, credential);

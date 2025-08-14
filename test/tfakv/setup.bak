@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage (provide at least one of):
+#   APP_ID=<app-registration-client-id GUID>
+#   APP_NAME=<app registration display name>
+#   SP_DISPLAY_NAME=<enterprise app (service principal) display name>
+#   REDIRECT_URI=<one of the app's redirect URIs to search by>
+
+# Ensure Azure context exported for providers
+export ARM_SUBSCRIPTION_ID=${ARM_SUBSCRIPTION_ID:-$(az account show --query id -o tsv)}
+export ARM_TENANT_ID=${ARM_TENANT_ID:-$(az account show --query tenantId -o tsv)}
+
+is_guid() { [[ "$1" =~ ^[0-9a-fA-F-]{36}$ ]]; }
+
+APP_ID=${APP_ID:-""}
+APP_NAME=${APP_NAME:-""}
+SP_DISPLAY_NAME=${SP_DISPLAY_NAME:-""}
+REDIRECT_URI=${REDIRECT_URI:-""}
+
+SP_OBJECT_ID=""
+
+# 1) If APP_ID (GUID) is provided, resolve SP by appId
+if [[ -n "$APP_ID" ]] && is_guid "$APP_ID"; then
+  SP_OBJECT_ID=$(az ad sp list --filter "appId eq '$APP_ID'" --query "[0].id" -o tsv)
+fi
+
+# 2) If not found, try APP_NAME -> appId -> SP
+if [[ -z "$SP_OBJECT_ID" && -n "$APP_NAME" ]]; then
+  APP_ID=$(az ad app list --display-name "$APP_NAME" --query "[0].appId" -o tsv || true)
+  if [[ -n "$APP_ID" ]]; then
+    SP_OBJECT_ID=$(az ad sp list --filter "appId eq '$APP_ID'" --query "[0].id" -o tsv)
+  fi
+fi
+
+# 3) If still not found, try SP_DISPLAY_NAME directly
+if [[ -z "$SP_OBJECT_ID" && -n "$SP_DISPLAY_NAME" ]]; then
+  SP_OBJECT_ID=$(az ad sp list --display-name "$SP_DISPLAY_NAME" --query "[0].id" -o tsv)
+fi
+
+# 4) If still not found, try REDIRECT_URI search across app registrations
+if [[ -z "$SP_OBJECT_ID" && -n "$REDIRECT_URI" ]]; then
+  read -r APP_ID _ <<<"$(az ad app list --all \
+    --query "[?contains(to_string(web.redirectUris), '$REDIRECT_URI')].[appId,id]" -o tsv | head -n1)"
+  if [[ -n "${APP_ID:-}" ]]; then
+    SP_OBJECT_ID=$(az ad sp list --filter "appId eq '$APP_ID'" --query "[0].id" -o tsv)
+  fi
+fi
+
+if [[ -z "$SP_OBJECT_ID" ]] || ! is_guid "$SP_OBJECT_ID"; then
+  echo "Error: Could not resolve Service Principal objectId. Provide one of APP_ID (GUID), APP_NAME, SP_DISPLAY_NAME, or REDIRECT_URI." >&2
+  exit 1
+fi
+
+echo "Resolved Service Principal Object ID: $SP_OBJECT_ID" >&2
+
+terraform plan -out tfplan \
+  -var subscription_id=${ARM_SUBSCRIPTION_ID} \
+  -var tenant_id=${ARM_TENANT_ID} \
+  -var target_sp_object_id="${SP_OBJECT_ID}" \
+  -var gate_group_name="OpenAI_APIKey"
+
+# Uncomment to apply automatically
+# terraform apply tfplan
+export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+export ARM_TENANT_ID=$(az account show --query tenantId -o tsv)
+
+# Either path
+APP_ID="uiapikms"
+SP_OBJECT_ID=$(az ad sp list --filter "appId eq '${APP_ID}'" --query "[0].id" -o tsv)
+
+terraform plan -out tfplan \
+  -var subscription_id=${ARM_SUBSCRIPTION_ID} \
+  -var tenant_id=${ARM_TENANT_ID} \
+  -var target_sp_object_id="${SP_OBJECT_ID}" \
+  -var gate_group_name="OpenAI_APIKey"
+
+#terraform apply tfplan

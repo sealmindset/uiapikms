@@ -13,6 +13,7 @@
     "test": "jest --runInBand"
   },
   "dependencies": {
+    "cookie-parser": "^1.4.6",
     "@azure/identity": "^4.4.1",
     "@azure/keyvault-secrets": "^4.9.0",
     "@prisma/client": "^5.18.0",

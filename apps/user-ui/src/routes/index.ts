@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { router as oidcRouter } from "./oidc";
 import { z } from "zod";
 import crypto from "crypto";
 import { requireAuth, requireRole } from "../middleware/rbac";
@@ -170,13 +171,10 @@ router.post("/keys", requireAuth, async (req,res)=>{
     }
   }
 });
-router.get("/login", (_req,res)=>{
-  if (config.env === "production") {
-    res.set("Cache-Control","no-store");
-  }
-  res.render("login", { title: "User Login", app: "user" });
+router.get("/login", (_req, res) => {
+  res.redirect("/auth/oidc/start");
 });
-router.get("/auth/mock", (req,res)=>{ (req.session as any).user={id:"dev",email:"dev@example.com",entraId:"mock",roles:["user","admin"]}; res.redirect("/keys"); });
+
 router.post("/logout", (req,res)=>{ req.session?.destroy(()=>res.redirect("/login")); });
 
 // Protected user dashboard

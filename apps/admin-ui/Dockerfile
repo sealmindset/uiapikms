@@ -20,11 +20,20 @@ RUN pnpm --filter admin-ui run build
 
 FROM node:20-bookworm-slim
 ENV NODE_ENV=production
+# Install OpenSSL required by Prisma engines
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 # Bring in full workspace with node_modules
 COPY --from=deps /app /app
+# Copy Prisma schema so generate can run
+COPY --from=build /app/prisma /app/prisma
 # Copy built artifacts into app package
 COPY --from=build /app/apps/admin-ui/dist /app/apps/admin-ui/dist
 COPY --from=build /app/apps/admin-ui/src/views /app/apps/admin-ui/src/views
 WORKDIR /app/apps/admin-ui
+# Ensure Prisma Client is generated in the final image
+RUN corepack enable \
+ && corepack prepare pnpm@9.6.0 --activate \
+ && pnpm -w prisma:generate
 EXPOSE 4000
 CMD ["node", "dist/index.js"]

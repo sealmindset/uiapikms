@@ -7,8 +7,10 @@ import { Pool } from "pg";
 import connectPgSimple from "connect-pg-simple";
 import cors from "cors";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import { router as systemRouter } from "./routes/index";
+import { router as oidcRouter } from "./routes/oidc";
 import { config } from "./config";
 import { logger } from "./logger";
 import csurf from "csurf";
@@ -41,18 +43,22 @@ export function buildApp() {
         styleSrc: ["'self'", "https:", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
         connectSrc: ["*"], // allow open XHR per project rule
-        formAction: ["'self'"],
+        formAction: ["'self'", "http://localhost:3020", "http://localhost:4000"],
         objectSrc: ["'none'"],
         frameAncestors: ["'self'"]
       }
     },
     crossOriginEmbedderPolicy: false
   }));
-  // Serve static assets (frontend JS/CSS) from src/public
+  // Serve static assets (frontend JS/CSS)
+  // In production build, files are bundled to dist/public (relative to compiled code)
+  app.use(express.static(path.join(__dirname, "public")));
+  // In dev (ts-node) we still serve from src/public for convenience
   app.use(express.static(path.join(__dirname, "../src/public")));
   app.use(cors({ origin: [config.origins.user, config.origins.admin], credentials: true }));
   const isTest = (process.env.NODE_ENV || config.env) === "test";
   if (!isTest) {
+
     app.use(rateLimit({ windowMs: config.rateLimitWindowMs, max: config.rateLimitMax }));
   }
 
@@ -78,6 +84,7 @@ export function buildApp() {
     ? new session.MemoryStore()
     : new PgSession({ pool: new Pool({ connectionString: config.dbUrl }), tableName: "session", createTableIfMissing: true });
   app.use(session({
+    name: 'user.sid',
     store,
     secret: config.sessionSecret, resave: false, saveUninitialized: false,
     cookie: { httpOnly: true, sameSite: "lax", secure: config.env==="production" }
@@ -86,6 +93,7 @@ export function buildApp() {
   app.use(pinoHttp());
   app.use(bodyParser.urlencoded({ extended: false }));
   app.use(bodyParser.json());
+  app.use(cookieParser());
 
   // Liveness
   app.get("/health/live", (_req, res) => res.json({ ok: true }));
@@ -136,6 +144,7 @@ export function buildApp() {
     app.use("/keys", issueKeyLimiter);
   }
 
+  app.use(oidcRouter);
   app.use(systemRouter);
 
   // Simple session verification endpoint

@@ -42,6 +42,24 @@ Only HTTPS/LB traffic should be allowed in prod.
 * Each container defines a **healthcheck** hitting `/healthz`; orchestrators can restart unhealthy pods.
 * Internal communication uses Docker default bridge; cloud deploys should place services in **private networks / subnet**.
 
+---
+## 9. Prisma Data Layer
+
+Prisma is the single data-access layer for both `user-ui` and `admin-ui` services. Usage summary:
+
+| Concern | Details |
+| --- | --- |
+| **Schema as code** | `prisma/schema.prisma` defines `User`, `ApiKey`, `Registration`, and `AuditLog` models. Changes are tracked in Git. |
+| **Migrations** | During CI/CD the image runs `pnpm prisma:generate` (codegen) and, in staging/prod, `pnpm prisma:deploy` to apply SQL migrations safely. |
+| **Typed ORM** | Services import a singleton `PrismaClient` (see `apps/*/src/prisma.ts`). All CRUD uses methods like `prisma.user.findUnique`, giving compile-time type safety and automatic parameterisation. |
+| **Transactions** | Critical flows—issue/revoke API key plus audit trail—use `prisma.$transaction([...])` ensuring atomicity. |
+| **Raw queries** | Limited to health-checks (`SELECT 1`) and analytics; always invoked with `$queryRaw` placeholders to stay parameterised. |
+| **Connection pooling** | Prisma connects once per pod; connection string comes from `DATABASE_URL`. PG Bouncer is recommended for high concurrency. |
+| **Engine binaries** | Prisma engines are installed at build time; the Dockerfile retains only the required binaries, keeping image size ~65 MB. |
+| **Security** | No SQL is ever interpolated by string; Prisma escapes all inputs. Role-based access is applied in application logic, not the database. |
+
+Prisma therefore covers schema management, migrations, and safe, typed data access—parameterised queries are just one facet of its role.
+
 ## 9. Dependency & Image Scanning
 * CI pipeline runs `npm audit` / `pnpm audit` and Docker image scanning (Trivy) (to be configured).
 

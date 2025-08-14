@@ -1,0 +1,36 @@
+image:
+  repository: ghcr.io/your-org/uiapikms-api
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+frontendImage:
+  repository: ghcr.io/your-org/uiapikms-frontend
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+postgres:
+  host: "${DATABASE_HOST}"
+  db: "apikeydb"
+  user: "admin"
+  passwordSecret: "postgres-secret" # k8s secret key POSTGRES_PASSWORD
+
+keyVault:
+  uri: "https://yourkv.vault.azure.net/"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
