@@ -12,6 +12,7 @@ import cookieParser from "cookie-parser";
 import { requireAuth, requireRole } from "./middleware/rbac";
 import { prisma } from "./prisma";
 import { router as oidcRouter } from "./routes/oidc";
+import { mountLogoutRoutes, createCsrfSkipper } from "./lib/expressSecurity";
 import csurf from "csurf";
 import { z } from "zod";
 
@@ -60,27 +61,24 @@ export function buildApp() {
   app.use(bodyParser.urlencoded({ extended: false }));
   app.use(bodyParser.json());
   app.use(cookieParser());
-  // Simple logout GET to avoid CSRF token requirement
-  app.get('/logout', (req,res)=>{
-    req.session.destroy(()=>{
-      res.clearCookie('admin.sid');
-      res.redirect('/login');
-    });
+  // Mount unified logout routes (GET/POST, /auth/logout and /logout)
+  mountLogoutRoutes(app, {
+    cookieName: 'admin.sid',
+    authority: process.env.OIDC_AUTHORITY!,
+    postLogoutRedirectUri: process.env.OIDC_LOGOUT_REDIRECT_URI!,
   });
+  // Friendly login route that starts OIDC
+  app.get('/login', (_req, res) => res.redirect('/auth/oidc/start'));
   // Mount OIDC router after session so req.session is available
   app.use(oidcRouter);
   // CSRF protection (disabled in test)
   const isTest = (process.env.NODE_ENV || "development") === "test";
   if (!isTest) {
-    const csrfProtection = csurf();
-    app.use((req: any, res: any, next: any) => {
-      const p = req.path;
-      if (p.startsWith('/auth/') || p === '/logout') return next();
-      return csrfProtection(req, res, next);
-    });
+    // CSRF: skip for /auth/* and /logout; protect everything else
+    app.use(createCsrfSkipper((req:any)=> req.path.startsWith('/auth/') || req.path === '/logout'));
     app.use((req: any, res, next) => {
       try {
-        res.locals.csrfToken = req.csrfToken();
+        if (typeof req.csrfToken === 'function') { res.locals.csrfToken = req.csrfToken(); }
       } catch {
         res.locals.csrfToken = '';
       }

@@ -26,7 +26,7 @@
   <header>
     <div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
       <h1 style="margin:0">Your API Keys</h1>
-      <form method="post" action="/logout"><button type="submit">Logout</button></form>
+      <a href="/logout"><button type="button">Logout</button></a>
     </div>
     <p class="muted">Signed in as <code><%= (user && user.email) || 'unknown' %></code></p>
   </header>

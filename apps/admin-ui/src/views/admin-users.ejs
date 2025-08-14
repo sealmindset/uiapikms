@@ -21,7 +21,7 @@
     <div class="card">
       <div class="row">
         <h1 style="margin:0">Admin Users</h1>
-        <form method="post" action="/logout"><%- include('partials/csrf') %><button class="btn" type="submit">Logout</button></form>
+        <a href="/logout"><button class="btn" type="button">Logout</button></a>
       </div>
       <p class="muted">Signed in as <code><%= (user && user.email) || 'unknown' %></code> with roles <code><%= (user && user.roles && user.roles.join(', ')) || 'none' %></code></p>
       <form method="get" action="/admin/users" class="row" style="gap:.75rem; margin:.5rem 0 0 0;">

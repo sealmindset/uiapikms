@@ -95,6 +95,25 @@ export function buildApp() {
   app.use(bodyParser.json());
   app.use(cookieParser());
 
+  // Unified logout (GET/POST): destroy session, clear cookie, and bounce to login
+  const logoutHandler = (req: any, res: any) => {
+    const finalize = () => {
+      res.clearCookie('user.sid', { path: '/' });
+      return res.redirect('/auth/oidc/start');
+    };
+    try {
+      if (req.session && typeof req.session.destroy === 'function') {
+        req.session.destroy(() => finalize());
+      } else {
+        finalize();
+      }
+    } catch {
+      finalize();
+    }
+  };
+  app.get('/logout', logoutHandler);
+  app.post('/logout', logoutHandler);
+
   // Liveness
   app.get("/health/live", (_req, res) => res.json({ ok: true }));
   // Readiness

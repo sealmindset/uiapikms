@@ -2,7 +2,14 @@ import { Request, Response, NextFunction } from "express";
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const user = (req.session as any)?.user;
-  if (!user) return res.status(401).send("Unauthorized");
+  if (!user) {
+    const accepts = (req.headers['accept'] || '').toString();
+    const isHtml = accepts.includes('text/html');
+    if (isHtml && req.method === 'GET') {
+      return res.redirect('/login');
+    }
+    return res.status(401).send("Unauthorized");
+  }
   next();
 }
 

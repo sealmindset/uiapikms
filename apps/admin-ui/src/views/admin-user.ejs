@@ -22,7 +22,7 @@
     <div class="card">
       <div class="row">
         <h1 style="margin:0">User Detail</h1>
-        <form method="post" action="/logout"><%- include('partials/csrf') %><button class="btn" type="submit">Logout</button></form>
+        <a href="/logout"><button class="btn" type="button">Logout</button></a>
       </div>
       <p class="muted">Signed in as <code><%= (user && user.email) || 'unknown' %></code> • <a href="/admin/users">Back to users</a></p>
 
